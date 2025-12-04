@@ -11,13 +11,12 @@ env/
 
 *.md
 *.txt
-
+collect_data.py
+real_time_inference.py
 *.jpg
+*.ipynb
 
 # Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
 # Dataset and models (large files)
 dataset/
 models/
