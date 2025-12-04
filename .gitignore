@@ -9,12 +9,10 @@ venv/
 ENV/
 env/
 
-*.md
-*.txt
-collect_data.py
-real_time_inference.py
+
+
 *.jpg
-*.ipynb
+
 
 # Jupyter
 # Dataset and models (large files)
