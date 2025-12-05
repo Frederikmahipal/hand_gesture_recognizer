@@ -124,7 +124,7 @@ def main():
             y_offset += 25
         
         # Display instructions
-        cv2.putText(frame, "Press 1-3 to label, 's' to skip, 'q' to quit", 
+        cv2.putText(frame, "Press 1-3 to label, 'q' to quit", 
                    (10, frame.shape[0] - 20),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 1)
         
@@ -135,9 +135,6 @@ def main():
         
         if key == ord('q'):
             break
-        elif key == ord('s'):
-            current_gesture = None
-            continue
         elif key >= ord('1') and key <= ord('3'):
             gesture_key = chr(key)
             if gesture_key in GESTURE_CLASSES:

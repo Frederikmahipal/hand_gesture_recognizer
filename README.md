@@ -26,17 +26,14 @@ This project allows you to control your computer mouse using hand gestures:
 git clone https://github.com/Frederikmahipal/hand_gesture_recognizer
 ```
 
-### Step 2: Set Up Virtual Environment
+### Step 2: Set up and activate Virtual Environment
 
 ```bash
-# Install uv if you haven't already
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create virtual environment
 uv venv
 
-# Activate virtual environment
-source .venv/bin/activate  # On macOS/Linux
+source .venv/bin/activate  
 ```
 
 ### Step 3: Install Dependencies
@@ -51,14 +48,14 @@ This will install:
 - scikit-learn (KNN classifier)
 - PyAutoGUI (mouse control)
 - NumPy, Matplotlib, Seaborn (data processing and visualization)
-- Jupyter/IPython kernel (for running the training notebook in virtual environment)
+- Jupyter/IPython kernel (for running the training notebook)
 
 ### Step 4: Collect Training Data
 
 You need to collect labeled images of hand gestures for training the model.
 
 ```bash
-python collect_data.py
+python3 collect_data.py
 ```
 
 **How to use:**
@@ -67,10 +64,8 @@ python collect_data.py
    - **`1`** -> `no_click` (open hand - move mouse)
    - **`2`** -> `left_click` (gesture - left click)
    - **`3`** -> `right_click` (gesture - right click)
-   - **`s`** -> Skip current frame
    - **`q`** -> Quit
-3. Collect at least **100-200 images per gesture** for good results
-4. Images are automatically split into `data/train/` (70%) and `data/test/` (30%)
+3. Images are automatically split into `data/train/` (70%) and `data/test/` (30%)
 
 ### Step 5: Train the Model
 
@@ -112,8 +107,8 @@ mini_project/
 ├── collect_data.py              # Data collection script
 ├── mouse_control.py             # Real-time mouse control
 ├── training/
-│   └── train_model.ipynb        # Training notebook (export as PDF for submission)
-├── data/
+│   └── train_model.ipynb        # Training notebook 
+├── data/                        # Generated when collecting data
 │   ├── train/                   # Training images
 │   │   ├── no_click/
 │   │   ├── left_click/
@@ -133,16 +128,15 @@ mini_project/
 ## Documentation
 
 <details>
-<summary><b>collect_data.py</b> - Data Collection Script</summary>
+<summary><b>collect_data.py</b> - Data collection script</summary>
 
 ### Overview
 Script for collecting labeled hand gesture images from webcam for training the machine learning model.
 
 
-### Features
+### Key Features
 - **Real-time webcam capture** with hand landmark visualization
 - **Automatic train/test split** - randomly assigns images to train (70%) or test (30%) folders
-- **MediaPipe hand detection** - only saves images where hands are detected
 - **Image preprocessing** - automatically resizes all images to 128×128 pixels for consistency
 
 ### Gesture Classes
@@ -152,7 +146,6 @@ Script for collecting labeled hand gesture images from webcam for training the m
 
 ### Keyboard Controls
 - **`1-3`**: Label current frame with gesture
-- **`s`**: Skip current frame
 - **`q`**: Quit and show collection summary
 
 ### Output
@@ -193,7 +186,7 @@ python3 mouse_control.py [OPTIONS]
 
 ### Key Functions
 - `load_knn_model()`: Loads trained KNN model and scaler from pickle files
-- `calculate_features_from_landmarks()`: Extracts 28 geometric features from hand landmarks
+- `calculate_features_from_landmarks()`: Extracts 12 geometric features from hand landmarks
 - `predict_with_knn()`: Runs inference on frame and returns gesture prediction with confidence
 - `main()`: Main loop for webcam capture, prediction, and mouse control
 
@@ -221,7 +214,7 @@ Jupyter notebook containing the complete machine learning pipeline for training 
 ### Workflow
 1. **Import Libraries**: MediaPipe, scikit-learn, OpenCV, NumPy, Matplotlib
 2. **Configuration**: Set up paths, gesture classes, and MediaPipe Hands detector
-3. **Feature Extraction**: Extract 28 geometric features from hand landmarks
+3. **Feature Extraction**: Extract 12 geometric features from hand landmarks
 4. **Data Processing**: Load and process training/test images
 5. **Feature Normalization**: StandardScaler for consistent feature scaling
 6. **Hyperparameter Tuning**: Cross-validation to find best K value
@@ -230,13 +223,12 @@ Jupyter notebook containing the complete machine learning pipeline for training 
 9. **Model Saving**: Save model and scaler to `models/` directory
 
 ### Key Sections
-- **Feature Engineering**: Extracts 28 features including:
-  - Wrist and hand center positions
-  - Finger tip positions
-  - Finger extended states (boolean)
-  - Distances between fingertips
-  - Hand orientation angles
-  - Hand size and depth
+- **Feature Engineering**: Extracts 12 relative features from hand landmarks. Only using the x and y coordinates of the hand landmarks is not enough, because the coordinates change depending on where the person in the frame sits. To make the model reliable, we calculate 12 relative features:
+  - **Finger Extension**: Compare the y-position of the fingertip to the knuckle. If the tip is lower than the knuckle, the finger is folded (5 features: one for each finger)
+  - **Total Extended Fingers**: Count of how many fingers are extended (1 feature)
+  - **Euclidean Distances**: Calculate the physical distance between specific fingers (e.g., Thumb-to-Index, Thumb-to-Middle, Index-to-Middle, Thumb-to-Pinky) to differentiate between a "relaxed hand" and a "fist" (4 features)
+  - **Hand Orientation Angle**: Angle from wrist to middle finger (1 feature)
+  - **Hand Width**: Normalized width of the hand (1 feature)
 
 - **Hyperparameter Tuning**: Tests K values from 1-15 using 5-fold cross-validation
 

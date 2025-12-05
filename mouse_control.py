@@ -47,98 +47,63 @@ def calculate_features_from_landmarks(landmarks, image_shape):
     # Calculate features from hand landmarks
     h, w = image_shape[:2]
     
-    # Convert normalized coordinates to pixel coordinates
+    # Convert normalized coordinates to pixel coordinates (2D only - we don't need depth)
     points = []
     for landmark in landmarks.landmark:
         x = landmark.x * w
         y = landmark.y * h
-        z = landmark.z * w
-        points.append([x, y, z])
+        points.append([x, y])
     points = np.array(points)
     
-    # Extract features from hand landmarks
-    wrist = points[0]
-    wrist_x_norm = wrist[0] / w
-    wrist_y_norm = wrist[1] / h
-    wrist_z_norm = wrist[2] / w
-    
-    hand_center = points.mean(axis=0)
-    center_x_norm = hand_center[0] / w
-    center_y_norm = hand_center[1] / h
-    center_z_norm = hand_center[2] / w
-    
+    # Extract finger tips and wrist
     thumb_tip = points[4]
     index_tip = points[8]
     middle_tip = points[12]
     ring_tip = points[16]
     pinky_tip = points[20]
+    wrist = points[0]
     
+    # Determine if fingers are extended
     thumb_extended = (thumb_tip[1] < points[3][1])
     index_extended = (index_tip[1] < points[6][1])
     middle_extended = (middle_tip[1] < points[10][1])
     ring_extended = (ring_tip[1] < points[14][1])
     pinky_extended = (pinky_tip[1] < points[18][1])
+    num_extended = sum([thumb_extended, index_extended, middle_extended, ring_extended, pinky_extended])
     
-    thumb_index_dist = np.linalg.norm(thumb_tip[:2] - index_tip[:2]) / w
-    index_middle_dist = np.linalg.norm(index_tip[:2] - middle_tip[:2]) / w
-    middle_ring_dist = np.linalg.norm(middle_tip[:2] - ring_tip[:2]) / w
-    ring_pinky_dist = np.linalg.norm(ring_tip[:2] - pinky_tip[:2]) / w
-    thumb_pinky_dist = np.linalg.norm(thumb_tip[:2] - pinky_tip[:2]) / w
+    # Calculate key distances between fingertips (normalized by image width)
+    thumb_index_dist = np.linalg.norm(thumb_tip - index_tip) / w
+    thumb_middle_dist = np.linalg.norm(thumb_tip - middle_tip) / w
+    index_middle_dist = np.linalg.norm(index_tip - middle_tip) / w
+    thumb_pinky_dist = np.linalg.norm(thumb_tip - pinky_tip) / w
     
-    wrist_to_middle = middle_tip[:2] - wrist[:2]
-    hand_angle = np.arctan2(wrist_to_middle[1], wrist_to_middle[0])
-    hand_angle_norm = hand_angle / np.pi
+    # Calculate hand orientation angle from wrist to middle finger
+    wrist_to_middle = middle_tip - wrist
+    hand_angle = np.arctan2(wrist_to_middle[1], wrist_to_middle[0]) / np.pi
     
+    # Calculate hand size (width)
     x_coords = points[:, 0]
-    y_coords = points[:, 1]
     hand_width = (x_coords.max() - x_coords.min()) / w
-    hand_height = (y_coords.max() - y_coords.min()) / h
     
-    index_base = points[5]
-    index_vector = index_tip[:2] - index_base[:2]
-    index_angle = np.arctan2(index_vector[1], index_vector[0]) / np.pi
-    
-    thumb_base = points[2]
-    thumb_vector = thumb_tip[:2] - thumb_base[:2]
-    thumb_angle = np.arctan2(thumb_vector[1], thumb_vector[0]) / np.pi
-    
-    hand_depth = points[:, 2].mean() / w
+    # Calculate hand center for mouse movement (2D only)
+    hand_center = points.mean(axis=0)
     
     features = np.array([
-        wrist_x_norm,
-        wrist_y_norm,
-        wrist_z_norm,
-        center_x_norm,
-        center_y_norm,
-        center_z_norm,
-        thumb_tip[0] / w,
-        thumb_tip[1] / h,
-        index_tip[0] / w,
-        index_tip[1] / h,
-        middle_tip[0] / w,
-        middle_tip[1] / h,
-        float(thumb_extended),
-        float(index_extended),
-        float(middle_extended),
-        float(ring_extended),
-        float(pinky_extended),
-        thumb_index_dist,
-        index_middle_dist,
-        middle_ring_dist,
-        ring_pinky_dist,
-        thumb_pinky_dist,
-        hand_angle_norm,
-        hand_width,
-        hand_height,
-        index_angle,
-        thumb_angle,
-        hand_depth,
+        float(thumb_extended),  # Feature 0: Thumb extended
+        float(index_extended),  # Feature 1: Index extended
+        float(middle_extended), # Feature 2: Middle extended
+        float(ring_extended),   # Feature 3: Ring extended
+        float(pinky_extended),  # Feature 4: Pinky extended
+        float(num_extended),    # Feature 5: Total extended fingers
+        thumb_index_dist,       # Feature 6: Distance thumb-index
+        thumb_middle_dist,      # Feature 7: Distance thumb-middle
+        index_middle_dist,      # Feature 8: Distance index-middle
+        thumb_pinky_dist,       # Feature 9: Distance thumb-pinky
+        hand_angle,             # Feature 10: Hand orientation angle
+        hand_width,             # Feature 11: Hand width
     ])
     
-    # Return hand center for mouse movement
-    hand_center_2d = hand_center[:2]
-    
-    return features, hand_center_2d
+    return features, hand_center
 
 def smooth_prediction(prediction):
     # Apply temporal smoothing to predictions
@@ -238,41 +203,8 @@ def main():
             for hand_landmarks in results.multi_hand_landmarks:
                 mp_drawing.draw_landmarks(
                     frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-        
-        # Calculate FPS
-        fps_frame_count += 1
-        if fps_frame_count % 30 == 0:
-            fps = 30 / (time.time() - fps_start_time)
-            fps_start_time = time.time()
-        else:
-            fps = 0
-        
-        # Display prediction on frame
-        if gesture is not None:
-            text = f"{gesture}: {confidence:.2f}"
-            color = (0, 255, 0) if confidence > confidence_threshold else (0, 0, 255)
-        else:
-            text = "No hand detected"
-            color = (128, 128, 128)
-        cv2.putText(frame, text, (10, 30),
-                   cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        
-        # Show all predictions
-        if gesture is not None:
-            y_offset = 70
-            for i, gesture_name in enumerate(GESTURE_CLASSES):
-                pred_val = raw_pred[i]
-                color = (0, 255, 0) if i == np.argmax(raw_pred) else (200, 200, 200)
-                text = f"{gesture_name}: {pred_val:.2f}"
-                cv2.putText(frame, text, (10, y_offset),
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-                y_offset += 20
-        
-        # Show FPS
-        if fps > 0:
-            cv2.putText(frame, f"FPS: {fps:.1f}", (10, frame.shape[0] - 20),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
-        
+           
+      
         # Track gesture stability
         if gesture is not None:
             if gesture not in gesture_frame_count:
@@ -357,7 +289,5 @@ def main():
     cap.release()
     cv2.destroyAllWindows()
     hands.close()
-    print("\nExiting...")
-
 if __name__ == '__main__':
     main()
