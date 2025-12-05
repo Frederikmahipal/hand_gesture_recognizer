@@ -8,7 +8,6 @@
 # Press '1' - no_click (open hand - move mouse)
 # Press '2' - left_click (Fist - left click)
 # Press '3' - right_click (two fingers - right click)
-# Press 's' - skip current frame
 # Press 'q' - quit
 
 # Images are automatically saved to
