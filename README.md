@@ -168,7 +168,7 @@ Real-time hand gesture recognition system that controls your mouse cursor and cl
 
 ### Usage
 ```bash
-python3 mouse_control.py [OPTIONS]
+python3 mouse_control.py 
 ```
 
 
